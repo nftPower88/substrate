@@ -8750,6 +8750,7 @@ dependencies = [
  "sp-session",
  "sp-version",
  "substrate-test-runtime-client",
+ "zstd",
 ]
 
 [[package]]

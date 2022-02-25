@@ -902,6 +902,16 @@ impl<R> TransactionOutcome<R> {
 	}
 }
 
+#[derive(Eq, PartialEq, Clone, Copy, Encode, Decode, Debug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct BlockStats {
+	pub witness_len: u64,
+	pub witness_compact_len: u64,
+	pub witness_compressed_len: u64,
+	pub block_len: u64,
+	pub block_num_extrinsics: u64,
+}
+
 #[cfg(test)]
 mod tests {
 	use crate::traits::BlakeTwo256;

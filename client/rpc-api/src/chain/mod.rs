@@ -30,7 +30,7 @@ pub use self::gen_client::Client as ChainClient;
 
 /// Substrate blockchain API
 #[rpc]
-pub trait ChainApi<Number, Hash, Header, SignedBlock> {
+pub trait ChainApi<Number, Hash, Header, SignedBlock, BlockStats> {
 	/// RPC metadata
 	type Metadata;
 
@@ -41,6 +41,9 @@ pub trait ChainApi<Number, Hash, Header, SignedBlock> {
 	/// Get header and body of a relay chain block.
 	#[rpc(name = "chain_getBlock")]
 	fn block(&self, hash: Option<Hash>) -> FutureResult<Option<SignedBlock>>;
+
+	#[rpc(name = "chain_getBlockStats")]
+	fn block_stats(&self, hash: Option<Hash>) -> Result<Option<BlockStats>>;
 
 	/// Get hash of the n-th block in the canon chain.
 	///

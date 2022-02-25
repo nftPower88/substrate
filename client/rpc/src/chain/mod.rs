@@ -33,10 +33,12 @@ use std::sync::Arc;
 
 use jsonrpc_pubsub::{manager::SubscriptionManager, typed::Subscriber, SubscriptionId};
 use sc_client_api::BlockchainEvents;
+use sp_api::{Core, ProvideRuntimeApi};
 use sp_rpc::{list::ListOrValue, number::NumberOrHex};
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
 	traits::{Block as BlockT, Header, NumberFor},
+	BlockStats,
 };
 
 use self::error::{Error, FutureResult, Result};
@@ -50,7 +52,8 @@ trait ChainBackend<Client, Block: BlockT>: Send + Sync + 'static
 where
 	Block: BlockT + 'static,
 	Block::Header: Unpin,
-	Client: HeaderBackend<Block> + BlockchainEvents<Block> + 'static,
+	Client: HeaderBackend<Block> + BlockchainEvents<Block> + ProvideRuntimeApi<Block> + 'static,
+	Client::Api: Core<Block>,
 {
 	/// Get client reference.
 	fn client(&self) -> &Arc<Client>;
@@ -71,6 +74,8 @@ where
 
 	/// Get header and body of a relay chain block.
 	fn block(&self, hash: Option<Block::Hash>) -> FutureResult<Option<SignedBlock<Block>>>;
+
+	fn block_stats(&self, hash: Option<Block::Hash>) -> Result<Option<BlockStats>>;
 
 	/// Get hash of the n-th block in the canon chain.
 	///
@@ -195,7 +200,12 @@ pub fn new_full<Block: BlockT, Client>(
 where
 	Block: BlockT + 'static,
 	Block::Header: Unpin,
-	Client: BlockBackend<Block> + HeaderBackend<Block> + BlockchainEvents<Block> + 'static,
+	Client: BlockBackend<Block>
+		+ HeaderBackend<Block>
+		+ BlockchainEvents<Block>
+		+ ProvideRuntimeApi<Block>
+		+ 'static,
+	Client::Api: Core<Block>,
 {
 	Chain { backend: Box::new(self::chain_full::FullChain::new(client, subscriptions)) }
 }
@@ -205,12 +215,14 @@ pub struct Chain<Block: BlockT, Client> {
 	backend: Box<dyn ChainBackend<Client, Block>>,
 }
 
-impl<Block, Client> ChainApi<NumberFor<Block>, Block::Hash, Block::Header, SignedBlock<Block>>
+impl<Block, Client>
+	ChainApi<NumberFor<Block>, Block::Hash, Block::Header, SignedBlock<Block>, BlockStats>
 	for Chain<Block, Client>
 where
 	Block: BlockT + 'static,
 	Block::Header: Unpin,
-	Client: HeaderBackend<Block> + BlockchainEvents<Block> + 'static,
+	Client: HeaderBackend<Block> + BlockchainEvents<Block> + ProvideRuntimeApi<Block> + 'static,
+	Client::Api: Core<Block>,
 {
 	type Metadata = crate::Metadata;
 
@@ -220,6 +232,10 @@ where
 
 	fn block(&self, hash: Option<Block::Hash>) -> FutureResult<Option<SignedBlock<Block>>> {
 		self.backend.block(hash)
+	}
+
+	fn block_stats(&self, hash: Option<Block::Hash>) -> Result<Option<BlockStats>> {
+		self.backend.block_stats(hash)
 	}
 
 	fn block_hash(
