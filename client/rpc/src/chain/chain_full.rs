@@ -30,7 +30,7 @@ use sp_api::{ApiExt, Core, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_core::Encode;
 use sp_runtime::{
-	generic::{BlockId, SignedBlock},
+	generic::{BlockId, DigestItem, SignedBlock},
 	traits::{Block as BlockT, Header},
 };
 use std::{marker::PhantomData, sync::Arc};
@@ -90,7 +90,9 @@ where
 				.block(&BlockId::Hash(self.unwrap_or_best(hash)))
 				.map_err(client_err)?;
 			if let Some(block) = block {
-				block.block
+				let (mut header, body) = block.block.deconstruct();
+				header.digest_mut().logs.retain(|item| !matches!(item, DigestItem::Seal(_, _)));
+				Block::new(header, body)
 			} else {
 				return Ok(None)
 			}
@@ -108,11 +110,10 @@ where
 		let block_len = block.encoded_size() as u64;
 		let block_num_extrinsics = block.extrinsics().len() as u64;
 		let pre_root = *parent_block.header().state_root();
-		let parent_hash = block.header().parent_hash();
 		let mut runtime_api = self.client.runtime_api();
 		runtime_api.record_proof();
 		runtime_api
-			.execute_block(&BlockId::Hash(*parent_hash), block)
+			.execute_block(&BlockId::Hash(parent_block.hash()), block)
 			.map_err(|err| Error::Client(Box::new(err)))?;
 		let witness = runtime_api
 			.extract_proof()

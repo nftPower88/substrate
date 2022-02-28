@@ -904,6 +904,7 @@ impl<R> TransactionOutcome<R> {
 
 #[derive(Eq, PartialEq, Clone, Copy, Encode, Decode, Debug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct BlockStats {
 	pub witness_len: u64,
 	pub witness_compact_len: u64,
